@@ -1,0 +1,11 @@
+# code/motion_detection.py
+import cv2
+
+def detect_motion(frame, backSub):
+    fg_mask = backSub.apply(frame)
+    motion = cv2.countNonZero(fg_mask) > 5000  # adjust threshold
+    if motion:
+        cv2.rectangle(frame, (5, 5), (200, 40), (255, 255, 255), -1)
+        cv2.putText(frame, "Motion Detected", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+    return frame
