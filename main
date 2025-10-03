@@ -1,0 +1,44 @@
+# code/main.py
+import cv2
+import numpy as np
+from multi_stream import StreamThread
+from motion_detection import detect_motion
+from integrity_check import is_compromised, add_warning
+
+def main(urls):
+    threads = [StreamThread(url, f"Camera {i+1}") for i, url in enumerate(urls)]
+    for t in threads: t.start()
+
+    backSubs = [cv2.createBackgroundSubtractorMOG2() for _ in range(4)]
+
+    while True:
+        frames = []
+        for i, t in enumerate(threads):
+            frame = t.frame if t.frame is not None else np.zeros((480, 640, 3), dtype=np.uint8)
+
+            frame = detect_motion(frame, backSubs[i])
+            if is_compromised(frame):
+                frame = add_warning(frame)
+
+            frames.append(frame)
+
+        top = np.hstack(frames[:2])
+        bottom = np.hstack(frames[2:])
+        grid = np.vstack([top, bottom])
+
+        cv2.imshow("RTSP Multi-Stream Viewer", grid)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    for t in threads: t.stop()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    urls = [
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov"
+    ]
+    main(urls)
