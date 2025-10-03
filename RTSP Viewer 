@@ -1,0 +1,53 @@
+# code/multi_stream.py
+import cv2
+import threading
+import numpy as np
+
+class StreamThread(threading.Thread):
+    def __init__(self, rtsp_url, name="Stream"):
+        super().__init__()
+        self.rtsp_url = rtsp_url
+        self.name = name
+        self.capture = cv2.VideoCapture(rtsp_url)
+        self.frame = None
+        self.running = True
+
+    def run(self):
+        while self.running:
+            ret, frame = self.capture.read()
+            if ret:
+                self.frame = cv2.resize(frame, (640, 480))
+            else:
+                self.frame = np.zeros((480, 640, 3), dtype=np.uint8)
+
+    def stop(self):
+        self.running = False
+        self.capture.release()
+
+def display_streams(urls):
+    threads = [StreamThread(url, f"Camera {i+1}") for i, url in enumerate(urls)]
+    for t in threads: t.start()
+
+    while True:
+        frames = [t.frame if t.frame is not None else np.zeros((480, 640, 3), dtype=np.uint8) for t in threads]
+        top = np.hstack(frames[:2])
+        bottom = np.hstack(frames[2:])
+        grid = np.vstack([top, bottom])
+
+        cv2.imshow("Multi-Stream Viewer", grid)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    for t in threads: t.stop()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    # Replace with 4 public RTSP streams (traffic cams etc.)
+    urls = [
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+        "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov"
+    ]
+    display_streams(urls)
