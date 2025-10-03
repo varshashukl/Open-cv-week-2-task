@@ -1,0 +1,25 @@
+# code/integrity_check.py
+import cv2
+import numpy as np
+
+def is_compromised(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Blur detection
+    lap_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+    if lap_var < 100:  # too blurry
+        return True
+
+    # Coverage / Laser detection
+    hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+    hist = hist / hist.sum()
+    if max(hist) > 0.75:  # uniform color
+        return True
+
+    return False
+
+def add_warning(frame):
+    cv2.rectangle(frame, (5, 45), (300, 80), (0, 0, 255), -1)
+    cv2.putText(frame, "Camera Compromised", (10, 70),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    return frame
